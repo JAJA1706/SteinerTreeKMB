@@ -1,6 +1,6 @@
 #ifndef PRIMMST_H
 #define PRIMMST_H
-#include "steiner.h"
+#include "Steiner.h"
 
 typedef struct MSTEdges
 {

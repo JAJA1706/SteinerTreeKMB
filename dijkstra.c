@@ -1,4 +1,4 @@
-#include "dijkstra.h"
+#include "Dijkstra.h"
 #include "List.h"
 #include <limits.h>
 #include <stdbool.h>
@@ -19,6 +19,7 @@ int minDistance(Path* path, bool* sptSet, const int vertCount)
 //reconstructs path based on previous vertices
 int reconstructPath(Path* path, int* previousVerts, int src, const int vertCount)
 {
+   #pragma omp for schedule(static)
    for(int i = 0; i < vertCount; ++i)
    {
       push_back(&path[i].path, i);
@@ -72,11 +73,14 @@ Path* dijkstra(int** graph, int src, const int vertCount)
          }
    }
 
+   #pragma omp parallel
    reconstructPath(shortestPath, previousVert, src, vertCount);
-   for (int i = 0; i < vertCount; i++)
-   {
-      printList(shortestPath[i].path);
-   }
+
+   // for (int i = 0; i < vertCount; i++)
+   // {
+   //    printList(shortestPath[i].path);
+   // }
+
    free(sptSet);
    free(previousVert);
    sptSet = NULL;

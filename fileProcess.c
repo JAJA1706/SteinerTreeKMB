@@ -1,3 +1,4 @@
+#include "FileProcess.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -90,7 +91,7 @@ int* readSteinerVerticesFromFile(char* fileName, int* verticesCount)
     FILE* file = fopen(fileName, "r");
     if(!file)
     {
-        puts("Couldn't open file with steiner verttors definition.");
+        puts("Couldn't open file with steiner vertices definition.");
         return steinerVerts;
     }
 

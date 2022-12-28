@@ -6,15 +6,33 @@
 
 int minKey(int* key, bool* mstSet, int vertNum)
 {
-    int min = INT_MAX, min_index;
- 
-    for (int v = 0; v < vertNum; v++)
-        if (mstSet[v] == false && key[v] < min)
-            min = key[v], min_index = v;
- 
-    return min_index;
+    int min = INT_MAX; 
+    int index = -1;
+    #pragma omp parallel
+    {
+        int indexLocal = index;
+        int minLocal = min;
+        #pragma omp for nowait
+        for (int i = 0; i < vertNum; i++)
+        {
+            if (mstSet[i] == 0 && key[i] < minLocal)
+            {
+                minLocal = key[i];
+                indexLocal = i;
+            }
+        }
+        #pragma omp critical
+        {
+            if (minLocal < min)
+            {
+                min = minLocal;
+                index = indexLocal;
+            }
+        }
+    }
+    return index;
 }
- 
+
 int printMST(int* parent, const Graph graph)
 {
     printf("Edge \tWeight\n");
@@ -39,6 +57,7 @@ MSTEdges* primMST(const Graph graph)
     for (int count = 0; count < graph.vertNum - 1; count++) {
         int u = minKey(key, mstSet, graph.vertNum);
         mstSet[u] = true;
+        #pragma omp parallel for schedule(static)
         for (int v = 0; v < graph.vertNum; v++)
             if (graph.values[u][v] && mstSet[v] == false
                 && graph.values[u][v] < key[v])
@@ -52,7 +71,6 @@ MSTEdges* primMST(const Graph graph)
         edges[i].first = parent[i+1];
         edges[i].second = i+1;
     }
-
 
     printMST(parent, graph);
 

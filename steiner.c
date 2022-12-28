@@ -1,8 +1,9 @@
-#include "steiner.h"
+#include "Steiner.h"
 #include "PrimMST.h"
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <omp.h>
  
 void printGraph(const Graph graph)
 {
@@ -20,6 +21,8 @@ void printGraph(const Graph graph)
 Path** calculateShortestPathsFromSteinerVerts(const Graph graph, const int* steinerVerts, const int steinerVertsNum)
 {
     Path** shortestPaths = malloc(sizeof(Path*)*steinerVertsNum);
+
+    #pragma omp parallel for schedule(static)
     for(int i = 0; i < steinerVertsNum; ++i)
     {
         Path* path = dijkstra(graph.values, steinerVerts[i], graph.vertNum);
@@ -55,7 +58,7 @@ MSTEdges* getEdgesOfMinimalSpanningTree(const Graph graphToCalculateMST)
      return primMST(graphToCalculateMST);
 }
 
-void reconstructTreeByLeavingOnlyMSTEdges(Graph* graph, MSTEdges* mstEdges, Path** shortestPaths, const int steinerVertsNum)
+void reconstructTreeByLeavingOnlyMSTEdges(Graph* graph, MSTEdges* mstEdges, Path** shortestPaths, const int* steinerVerts, const int steinerVertsNum)
 {
     bool** includedVals = malloc(sizeof(bool*)*graph->vertNum);
     for(int i = 0; i < graph->vertNum; ++i)
@@ -67,17 +70,17 @@ void reconstructTreeByLeavingOnlyMSTEdges(Graph* graph, MSTEdges* mstEdges, Path
 
 
     const int mstEdgesCount = steinerVertsNum - 1;
+    #pragma omp parallel for schedule(static)
     for(int i = 0; i < mstEdgesCount; ++i)
     {
-        int startVert = mstEdges[i].first;
-        int endVert = mstEdges[i].second;
+        int startVertIndex = mstEdges[i].first;
+        int endVertIndex = mstEdges[i].second;
         Path includedPath;
         for(int j = 0; j < graph->vertNum; ++j)
         {
-            if(get(shortestPaths[startVert][j].path, 0) == endVert)
+            if(get(shortestPaths[startVertIndex][j].path, 0) == steinerVerts[endVertIndex])
             {
-                printList(shortestPaths[startVert][j].path);
-                includedPath = shortestPaths[startVert][j];
+                includedPath = shortestPaths[startVertIndex][j];
                 break;
             }
         }
@@ -97,7 +100,6 @@ void reconstructTreeByLeavingOnlyMSTEdges(Graph* graph, MSTEdges* mstEdges, Path
                 graph->values[i][j] = 0;
 
     removeUnnecessaryVertices(graph);
-    printGraph(*graph);
 
     for(int i = 0; i < graph->vertNum; ++i)
         free(includedVals[i]);
@@ -107,6 +109,8 @@ void reconstructTreeByLeavingOnlyMSTEdges(Graph* graph, MSTEdges* mstEdges, Path
 void reconstructTreeToSteinerTree(Graph* graph, MSTEdges* mstEdges, const int* steinerVerts, const int steinerVertsNum)
 {
     bool** includedVals = malloc(sizeof(bool*)*graph->vertNum);
+    const int mstEdgesCount = graph->vertNum - 1;
+
     for(int i = 0; i < graph->vertNum; ++i)
         includedVals[i] = malloc(sizeof(bool)*graph->vertNum);
 
@@ -114,7 +118,6 @@ void reconstructTreeToSteinerTree(Graph* graph, MSTEdges* mstEdges, const int* s
         for(int j = 0; j < graph->vertNum; ++j)
             includedVals[i][j] = false;
 
-    const int mstEdgesCount = graph->vertNum - 1;
     for(int i = 0; i < mstEdgesCount; ++i) //leave only mstedges
     {
         int vertX = mstEdges[i].first;
@@ -138,6 +141,7 @@ void reconstructTreeToSteinerTree(Graph* graph, MSTEdges* mstEdges, const int* s
 
         int numOfConnects = 0;
         int* isConnectedWith;
+        #pragma omp parallel for schedule(static)
         for(int j = 0; j < mstEdgesCount; ++j)
         {
             if(mstEdges[j].first == i)
